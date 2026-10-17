@@ -1,0 +1,13 @@
+## 3. SQL `CREATE TABLE` Statements
+
+```sql
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE notes (
+    note_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL
+);
