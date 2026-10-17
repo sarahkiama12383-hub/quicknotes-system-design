@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickNotes System Design</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="api.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h1>QuickNotes Dashboard</h1>
+
+    <!-- Task 1: Load Button & Status -->
+    <button id="load-btn">Load Notes</button>
+    <p id="status"></p>
+
+    <!-- Task 2: Create Note Form -->
+    <form id="note-form">
+      <h3>Create New Note</h3>
+      <input type="text" id="title-input" placeholder="Note title (required, max 100 chars)" maxlength="100" required>
+      <textarea id="body-input" placeholder="Note body (optional)"></textarea>
+      <button type="submit" id="submit-btn">Publish Note</button>
+    </form>
+
+    <hr>
+
+    <!-- Notes List Container -->
+    <h2>Notes Feed</h2>
+    <ul id="notes-list">
+      <!-- Empty state will show here if no notes exist -->
+    </ul>
+  </div>
+</body>
+</html>
