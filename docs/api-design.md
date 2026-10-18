@@ -7,25 +7,32 @@ This document specifies the REST API contract for the production QuickNotes back
 
 | Method | Endpoint | Description | Success Status |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/notes` | Retrieves paginated list of notes | `200 OK` |
+| `GET` | `/api/v1/notes` | Retrieves a paginated list of notes | `200 OK` |
 | `POST` | `/api/v1/notes` | Creates a new note | `201 Created` |
 | `GET` | `/api/v1/notes/:id` | Retrieves a specific note by ID | `200 OK` |
 | `PUT` | `/api/v1/notes/:id` | Updates an existing note | `200 OK` |
 | `DELETE` | `/api/v1/notes/:id` | Deletes a note | `200 OK` / `204 No Content` |
-| `GET` | `/api/v1/users/:id/notes` | Lists all notes created by a specific user | `200 OK` |
 
 ---
 
 ## Request & Response Examples
 
-### Create Note (`POST /api/v1/notes`)
-* **Request Body:**
+### 1. List Notes (`GET /api/v1/notes`)
+* **Response Body (`200 OK`):**
   ```json
-  {
-    "title": "Project Architecture",
-    "body": "Draft system design outline before Tuesday.",
-    "userId": 1
-  }
+  [
+    {
+      "id": 1,
+      "title": "Project Architecture",
+      "body": "Outline system design notes.",
+      "userId": 1
+    }
+  ]
+{
+  "title": "Project Architecture",
+  "body": "Draft system design outline before Tuesday.",
+  "userId": 1
+}
 {
   "id": 105,
   "title": "Project Architecture",
@@ -33,41 +40,59 @@ This document specifies the REST API contract for the production QuickNotes back
   "userId": 1,
   "created_at": "2026-10-17T12:00:00Z"
 }
-* **Commit message:** `Add data model doc.`[span_18](start_span)[span_18](end_span)
-
+{
+  "error": "Bad Request",
+  "message": "Title is required and cannot exceed 100 characters.",
+  "status": 400
+}
 ---
 
-#### 3. `docs/architecture.md` (Task 6)[span_19](start_span)[span_19](end_span)[span_20](start_span)[span_20](end_span)
+### Step C: Fill Out `docs/data-model.md`
+Tap on **`docs/data-model.md`** and make sure it includes the `tags` table, the `note_tags` join table, indexing, and SQL queries[span_3](start_span)[span_3](end_span):
+
 ```markdown
-# QuickNotes Architecture & Scaling Document
+# QuickNotes Data Model
 
-## 1. Requirements & Estimates (1 Million Users)
-* **Assumptions:** 1M DAU, 50 feed reads/day, 5 notes created/day.
-* **Reads/sec:** ~580 reads/sec.
-* **Writes/sec:** ~58 writes/sec.
-* **Storage/year:** ~365 GB text storage/year.
-
----
-
-## 2. Architecture Diagram
----
-
-## 3. Component Breakdown
-* **CDN:** Caches static assets globally to minimize network latency.
-* **Load Balancer:** Distributes traffic evenly across application servers.
-* **App Servers:** Executes backend business logic and API routing.
-* **Cache (Redis):** Stores recent note feeds in memory for sub-millisecond retrieval.
-* **Primary Database:** Handles strict transaction writes.
-* **Read Replicas:** Offloads high-volume read traffic from the main database.
+## 1. Entities & Schema Columns
+* **`users`**: `user_id` (PK, INTEGER), `username` (TEXT, UNIQUE), `email` (TEXT, UNIQUE)
+* **`notes`**: `note_id` (PK, INTEGER), `user_id` (FK, INTEGER), `title` (TEXT), `body` (TEXT), `created_at` (TIMESTAMP)
+* **`tags`**: `tag_id` (PK, INTEGER), `tag_name` (TEXT, UNIQUE)
+* **`note_tags`**: `note_id` (FK, INTEGER), `tag_id` (FK, INTEGER) — *Composite Primary Key (`note_id`, `tag_id`)*
 
 ---
 
-## 4. Request Flow
-* **GET `/notes` Flow:** Client hits CDN/Load Balancer $\rightarrow$ App Server checks Redis Cache $\rightarrow$ If cache miss, queries Database Read Replica $\rightarrow$ returns notes.
-* **POST `/notes` Flow:** Client sends request $\rightarrow$ Load Balancer routes to App Server $\rightarrow$ App Server validates input $\rightarrow$ writes new note to Primary Database $\rightarrow$ clears user cache.
+## 2. Relationships
+* **Users to Notes:** One-to-Many (One user can author multiple notes).
+* **Notes to Tags:** Many-to-Many (One note can have multiple tags, and a tag can belong to many notes, linked via the `note_tags` join table).
 
 ---
 
-## 5. Trade-Offs & Single Points of Failure (SPOF)
-* **Trade-Off:** Using database read replicas means eventual consistency—a user might experience a split-second delay before seeing a newly written note on secondary read queries.
-* **SPOF Mitigation:** The Primary Database is a single point of failure; we mitigate this by setting up automated database failover to a standby replica.
+## 3. SQL `CREATE TABLE` Statements
+```sql
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE notes (
+    note_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE tags (
+    tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tag_name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE note_tags (
+    note_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    PRIMARY KEY (note_id, tag_id),
+    FOREIGN KEY (note_id) REFERENCES notes(note_id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+);
